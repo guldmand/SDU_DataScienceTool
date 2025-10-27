@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sdu-dst"
+version = "0.1.0"
+description = "SDU Data Science Tool: async API client, WebSocket streaming, Redis cache, pluggable sources."
+authors = [{ name = "SDU Data Science Team" }]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "httpx>=0.27.0",
+  "aiolimiter>=1.1.0",
+  "tenacity>=8.2.3",
+  "cachetools>=5.3.3",
+  "orjson>=3.9.15",
+  "redis>=5.0.1",
+  "yfinance>=0.2.40",
+  "pandas>=2.2.2",
+  "numpy>=1.26.4",
+  "websockets>=12.0",
+]
+
+optional-dependencies.dev = [
+  "pytest>=8.0.0",
+  "pytest-asyncio>=0.23.6",
+  "ruff>=0.5.0",
+  "mypy>=1.10.0",
+  "types-redis",
+]

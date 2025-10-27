@@ -1,0 +1,36 @@
+Business Source License 1.1
+Copyright (c) 2025
+Jannik Busse Guldmand
+
+Licensed under the Business Source License 1.1 (the "License");
+You may not use, copy, modify, or distribute this software except in
+compliance with this License.
+
+A copy of the License is available at:
+https://mariadb.com/bsl11/
+
+Use of this software for commercial purposes requires a separate,
+written license agreement from the copyright holder. "Commercial
+purposes" means any use of the software in a revenue-generating product
+or service, including internal business operations intended to generate
+revenue, consulting, resale, or hosting the software as part of a paid
+offering.
+
+Academic, research, and educational use of this software is explicitly
+permitted without requiring a commercial license, including use in
+coursework, research projects, theses, teaching materials, publications,
+and internal academic tooling, as long as such use remains non-commercial
+in nature.
+
+Accessing, downloading, or using any portion of this codebase constitutes
+acceptance of the terms of this License. Redistribution and modification
+of this software are permitted, provided that this license text is
+preserved in all copies and that any modifications are clearly
+documented.
+
+For inquiries about commercial licensing, contact:
+guruguldmand@gmail.com
+
+As of the Change Date defined in the License (typically 4 years from the
+date of first release), this software will be automatically converted to
+the open-source license specified in the License.
