@@ -3,9 +3,10 @@ import asyncio
 
 
 async def main():
-    g = GDELTSource()
-    events = await g.fetch_events("Apple", "2024-01-01", "2024-01-31")
+    src = GDELTSource()
+    events = await src.fetch_events("Apple", "2024-01-01", "2024-01-31")
     print(events.head())
+    await src.close()
 
 
 asyncio.run(main())

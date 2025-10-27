@@ -115,6 +115,29 @@ If both print tables, installation is working.
 
 ---
 
+## 📚 Examples Overview
+
+The `examples/` folder contains runnable scripts demonstrating how to interact with
+different components of this toolkit.
+
+| Script                          | Purpose                                      | I/O Type      |
+|---------------------------------|----------------------------------------------|---------------|
+| `fetch_prices.py`               | Fetch historical OHLCV price data for tickers | REST (pull)   |
+| `fetch_events.py`               | Fetch generic event data via keyword query    | REST (pull)   |
+| `fetch_global_news_events.py`   | Fetch global news events powered by GDELT     | REST (pull)   |
+| `fetch_prices_and_events.py`    | Fetch and compare price data and news events  | REST (pull)   |
+| `stream_ticks.py`               | Stream real-time tick data via WebSocket      | WS (stream)   |
+
+Usage examples for each script can be found inline at the top of the corresponding file.
+To view available flags, run:
+
+```bash
+python examples/fetch_prices.py --help
+
+
+
+---
+
 ## 🧩 Usage Examples
 
 ### YahooFinanceSource

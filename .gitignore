@@ -1,6 +1,12 @@
 # Python
 __pycache__/
 *.pyc
+dist/
+build/
+*.egg-info/
+
+# test
+.pytest_cache/
 
 # Virtualenv
 .venv/
@@ -19,3 +25,6 @@ __pycache__/
 
 # cache
 .cache/
+
+# notebook
+.ipynb_checkpoints/
