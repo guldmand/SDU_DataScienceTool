@@ -133,6 +133,7 @@ To view available flags, run:
 
 ```bash
 python examples/fetch_prices.py --help
+```
 
 
 
