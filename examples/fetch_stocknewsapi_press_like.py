@@ -5,7 +5,11 @@ from sdu_dst.sources.stocknewsapi import StockNewsAPISource
 async def main():
     src = StockNewsAPISource()
 
-    df = await src.fetch_company_announcements(["AAPL"], limit=5)
+    # Press-release-lignende nyheder (StockNewsAPI har ikke separat endpoint)
+    df = await src.fetch_press_releases(
+        symbols=["AAPL"],
+        limit=5,
+    )
     print(df)
 
     await src.close()

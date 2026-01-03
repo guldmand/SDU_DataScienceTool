@@ -14,12 +14,12 @@ class NewsDataSource(NewsSource):
 
     Covers:
     - General news
-    - Market news
-    - Keyword-based search
+    - Market / company news
+    - Press releases (datatype=press_release)
 
-    Limitations:
-    - 12h delay
-    - No true press releases
+    Notes:
+    - FREE tier has 12h delay
+    - Limited request volume
     """
 
     BASE_URL = "https://newsdata.io/api/1"
@@ -35,48 +35,68 @@ class NewsDataSource(NewsSource):
     async def close(self):
         await self.client.close()
 
-    # ---------------------------------------------------------
-    # 🌍 General / Market news
-    # ---------------------------------------------------------
-    async def fetch_latest_news(
+    # -----------------------------------------------------
+    # 📰 General / market / company news
+    # -----------------------------------------------------
+    async def fetch_news(
         self,
         query: Optional[str] = None,
-        language: str = "en",
-        limit: int = 20,
+        symbols: Optional[Iterable[str]] = None,
+        datatype: Optional[str] = None,
+        limit: int = 10,
     ) -> pd.DataFrame:
         params = {
             "apikey": self.api_key,
-            "language": language,
-            "size": limit,
+            "size": min(limit, 50),
         }
 
         if query:
             params["q"] = query
 
-        data = await self.client.get_json("news", params=params)
-        articles = data.get("results", [])
+        if symbols:
+            params["symbol"] = ",".join(symbols)
 
-        return self._to_df(articles, news_type="newsdata_latest")
+        if datatype:
+            params["datatype"] = datatype  # news | press_release | blog | etc.
 
-    # ---------------------------------------------------------
-    # 🔧 Intern helper
-    # ---------------------------------------------------------
-    def _to_df(self, data: list[dict], news_type: str) -> pd.DataFrame:
+        data = await self.client.get_json("latest", params=params)
+        return self._to_df(data.get("results", []), datatype or "news")
+
+    # -----------------------------------------------------
+    # 📣 Press releases (OFFICIAL)
+    # -----------------------------------------------------
+    async def fetch_press_releases(
+        self,
+        symbols: Optional[Iterable[str]] = None,
+        limit: int = 10,
+    ) -> pd.DataFrame:
+        return await self.fetch_news(
+            symbols=symbols,
+            datatype="press_release",
+            limit=limit,
+        )
+
+    # -----------------------------------------------------
+    # 🔧 Mapper
+    # -----------------------------------------------------
+    def _to_df(self, items: list[dict], news_type: str) -> pd.DataFrame:
         rows = []
-        for item in data:
+        for it in items:
             rows.append(
                 {
-                    "ts": pd.to_datetime(
-                        item.get("pubDate"), utc=True, errors="coerce"
-                    ),
-                    "headline": item.get("title"),
-                    "text": item.get("description"),
+                    "ts": pd.to_datetime(it.get("pubDate"), utc=True, errors="coerce"),
+                    "headline": it.get("title"),
+                    "text": it.get("description"),
+                    "publisher": it.get("source_id"),
                     "source": "newsdata.io",
-                    "publisher": item.get("source_id"),
-                    "url": item.get("link"),
-                    "symbol": None,
-                    "category": item.get("category"),
-                    "country": item.get("country"),
+                    "url": it.get("link"),
+                    "symbol": (
+                        ",".join(it["symbol"])
+                        if isinstance(it.get("symbol"), list)
+                        else it.get("symbol")
+                    ),
+                    "image": it.get("image_url"),
+                    "site": it.get("source_url"),
                     "type": news_type,
                 }
             )

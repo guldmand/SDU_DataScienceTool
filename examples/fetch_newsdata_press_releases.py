@@ -5,8 +5,8 @@ from sdu_dst.sources.newsdata import NewsDataSource
 async def main():
     src = NewsDataSource()
 
-    df = await src.fetch_news(
-        query="stock market",
+    df = await src.fetch_press_releases(
+        symbols=["AAPL"],
         limit=5,
     )
     print(df)

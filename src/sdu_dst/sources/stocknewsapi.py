@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import pandas as pd
-from typing import Iterable, Optional
+from typing import Iterable
 
 from .base import NewsSource
 from ..api.client import ApiClient
@@ -13,10 +13,11 @@ class StockNewsAPISource(NewsSource):
     Vendor-specific source for StockNewsAPI (BASIC plan).
 
     Covers:
-    - Stock-specific news (ticker-based)
-    - General market news
-    - Sentiment & ranking
-    - Press-release-like company announcements
+    - Stock / market news
+    - Company-related news
+
+    Notes:
+    - No true press releases (PRs are mixed into stock news)
     """
 
     BASE_URL = "https://stocknewsapi.com/api/v1"
@@ -32,14 +33,13 @@ class StockNewsAPISource(NewsSource):
     async def close(self):
         await self.client.close()
 
-    # ---------------------------------------------------------
-    # 📰 Stock / ticker news
-    # ---------------------------------------------------------
+    # -----------------------------------------------------
+    # 📰 Stock / market news
+    # -----------------------------------------------------
     async def fetch_stock_news(
         self,
         symbols: Iterable[str],
-        limit: int = 20,
-        sentiment: Optional[str] = None,
+        limit: int = 10,
     ) -> pd.DataFrame:
         params = {
             "tickers": ",".join(symbols),
@@ -47,55 +47,42 @@ class StockNewsAPISource(NewsSource):
             "token": self.api_key,
         }
 
-        if sentiment:
-            params["sentiment"] = sentiment
+        # Root endpoint: /api/v1
+        data = await self.client.get_json("", params=params)
+        return self._to_df(data.get("data", []), news_type="stock_news")
 
-        data = await self.client.get_json("category", params=params)
-        return self._to_df(data.get("data", []), news_type="stocknewsapi_stock")
-
-    # ---------------------------------------------------------
-    # 🌍 General market news
-    # ---------------------------------------------------------
-    async def fetch_general_news(self, limit: int = 20) -> pd.DataFrame:
-        params = {
-            "items": limit,
-            "token": self.api_key,
-        }
-
-        data = await self.client.get_json("category", params=params)
-        return self._to_df(data.get("data", []), news_type="stocknewsapi_general")
-
-    # ---------------------------------------------------------
-    # 📣 Press-release-like company news
-    # ---------------------------------------------------------
-    async def fetch_company_announcements(
-        self, symbols: Iterable[str], limit: int = 20
+    # -----------------------------------------------------
+    # 📣 Press releases (NOT distinct on this API)
+    # -----------------------------------------------------
+    async def fetch_press_releases(
+        self,
+        symbols: Iterable[str],
+        limit: int = 10,
     ) -> pd.DataFrame:
-        params = {
-            "tickers": ",".join(symbols),
-            "items": limit,
-            "token": self.api_key,
-        }
+        # StockNewsAPI does not separate PRs
+        return await self.fetch_stock_news(symbols, limit)
 
-        data = await self.client.get_json("category", params=params)
-        return self._to_df(data.get("data", []), news_type="stocknewsapi_press_like")
-
-    # ---------------------------------------------------------
-    # 🔧 Intern helper
-    # ---------------------------------------------------------
-    def _to_df(self, data: list[dict], news_type: str) -> pd.DataFrame:
+    # -----------------------------------------------------
+    # 🔧 Mapper
+    # -----------------------------------------------------
+    def _to_df(self, items: list[dict], news_type: str) -> pd.DataFrame:
         rows = []
-        for item in data:
+        for it in items:
             rows.append(
                 {
-                    "ts": pd.to_datetime(item.get("date"), utc=True, errors="coerce"),
-                    "headline": item.get("title"),
-                    "text": item.get("text"),
+                    "ts": pd.to_datetime(it.get("date"), utc=True, errors="coerce"),
+                    "headline": it.get("title"),
+                    "text": it.get("text"),
+                    "publisher": it.get("source_name"),
                     "source": "stocknewsapi",
-                    "publisher": item.get("source_name"),
-                    "url": item.get("news_url"),
-                    "symbol": item.get("tickers"),
-                    "sentiment": item.get("sentiment"),
+                    "url": it.get("news_url"),
+                    "symbol": (
+                        ",".join(it["tickers"])
+                        if isinstance(it.get("tickers"), list)
+                        else it.get("tickers")
+                    ),
+                    "image": it.get("image_url"),
+                    "site": it.get("source_name"),
                     "type": news_type,
                 }
             )
