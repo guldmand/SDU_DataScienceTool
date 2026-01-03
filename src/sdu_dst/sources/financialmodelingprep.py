@@ -182,3 +182,58 @@ class FinancialModelingPrepSource(NewsSource):
             df = df.dropna(subset=["ts"]).sort_values("ts")
 
         return df
+
+    # More Key Metrics Data
+
+    async def fetch_ratios(self, symbol: str) -> pd.DataFrame:
+        params = {
+            "symbol": symbol,
+            "apikey": self.api_key,
+        }
+        """
+        Should give the following metrics:
+        priceEarningsRatioTTM,
+		pegRatioTTM,
+		earningsPerShareTTM,
+		returnOnEquityTTM,
+		dividendYieldTTM
+        """
+        data = await self.client.get_json("ratios-ttm", params=params)
+        return pd.DataFrame(data)
+
+    async def fetch_income_statement(
+        self,
+        symbol: str,
+        period: Literal["annual", "quarter"] = "annual",
+        limit: int = 4,
+    ) -> pd.DataFrame:
+        """
+        Should give the following metrics:
+        revenue,
+        grossProfit,
+        operatingIncome,
+        EBITDA,
+        netIncome,
+        margins (can be calculated)
+        """
+        params = {
+            "symbol": symbol,
+            "period": period,
+            "limit": limit,
+            "apikey": self.api_key,
+        }
+        data = await self.client.get_json("income-statement", params=params)
+        return pd.DataFrame(data)
+
+    async def fetch_market_profile(self, symbol: str) -> pd.DataFrame:
+        """
+        Should give the following metrics:
+        price
+        marketCap
+        beta
+        sharesOutstanding
+        sector
+        industry
+        currency
+        """
+        return await self.fetch_company_profile(symbol)
