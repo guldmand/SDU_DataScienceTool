@@ -10,14 +10,11 @@ from ..api.client import ApiClient
 
 class StockNewsAPISource(NewsSource):
     """
-    Vendor-specific source for StockNewsAPI (BASIC plan).
+    Vendor-specific source for StockNewsAPI (BASIC tier).
 
     Covers:
-    - Stock / market news
-    - Company-related news
-
-    Notes:
-    - No true press releases (PRs are mixed into stock news)
+    - Stock news
+    - Company announcements / press-like news
     """
 
     BASE_URL = "https://stocknewsapi.com/api/v1"
@@ -34,7 +31,32 @@ class StockNewsAPISource(NewsSource):
         await self.client.close()
 
     # -----------------------------------------------------
-    # 📰 Stock / market news
+    # 🔁 REQUIRED by NewsSource (compat wrapper)
+    # -----------------------------------------------------
+    async def fetch_events(
+        self,
+        query: str | None,
+        start: str,
+        end: str,
+        **kwargs,
+    ) -> pd.DataFrame:
+        """
+        StockNewsAPI does not support date-range queries in BASIC tier.
+        This is a compatibility wrapper for the unified interface.
+        """
+        symbols = kwargs.get("symbols")
+        limit = kwargs.get("limit", 10)
+
+        if not symbols:
+            return pd.DataFrame()
+
+        return await self.fetch_stock_news(
+            symbols=symbols,
+            limit=limit,
+        )
+
+    # -----------------------------------------------------
+    # 📰 Stock news / company news
     # -----------------------------------------------------
     async def fetch_stock_news(
         self,
@@ -47,27 +69,30 @@ class StockNewsAPISource(NewsSource):
             "token": self.api_key,
         }
 
-        # Root endpoint: /api/v1
         data = await self.client.get_json("", params=params)
-        return self._to_df(data.get("data", []), news_type="stock_news")
+        return self._to_df(data.get("data", []), "stock_news")
 
     # -----------------------------------------------------
-    # 📣 Press releases (NOT distinct on this API)
+    # 📣 Press-release-like company announcements
     # -----------------------------------------------------
     async def fetch_press_releases(
         self,
         symbols: Iterable[str],
         limit: int = 10,
     ) -> pd.DataFrame:
-        # StockNewsAPI does not separate PRs
         return await self.fetch_stock_news(symbols, limit)
 
     # -----------------------------------------------------
     # 🔧 Mapper
     # -----------------------------------------------------
-    def _to_df(self, items: list[dict], news_type: str) -> pd.DataFrame:
+    def _to_df(self, items: list[dict], _: str) -> pd.DataFrame:
         rows = []
+
         for it in items:
+            topics = it.get("topics", []) or []
+
+            news_type = "press_release" if "PressRelease" in topics else "stock_news"
+
             rows.append(
                 {
                     "ts": pd.to_datetime(it.get("date"), utc=True, errors="coerce"),
