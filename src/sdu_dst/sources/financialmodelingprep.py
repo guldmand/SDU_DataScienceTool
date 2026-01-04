@@ -115,6 +115,17 @@ class FinancialModelingPrepSource(NewsSource):
         return pd.DataFrame(data)
 
     # ------------------------------------------------------------------
+    # 📈 Market quote (price, beta, shares, 52w range, etc.)
+    # ------------------------------------------------------------------
+    async def fetch_market_quote(self, symbol: str) -> pd.DataFrame:
+        params = {
+            "symbol": symbol,
+            "apikey": self.api_key,
+        }
+        data = await self.client.get_json("quote", params=params)
+        return pd.DataFrame(data)
+
+    # ------------------------------------------------------------------
     # 📊 Nøgletal (TTM)
     # ------------------------------------------------------------------
     async def fetch_key_metrics(self, symbol: str) -> pd.DataFrame:
