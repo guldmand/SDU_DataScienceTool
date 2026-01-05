@@ -37,28 +37,96 @@ class FinancialModelingPrepSource(NewsSource):
     # ------------------------------------------------------------------
     # 📰 BACKWARD COMPAT (bruges af ældre examples / pipelines)
     # ------------------------------------------------------------------
-    async def fetch_events(
-        self, symbols: Iterable[str], limit: int = 20
-    ) -> pd.DataFrame:
+    async def fetch_events(self, symbols: Iterable[str], **kwargs) -> pd.DataFrame:
         """
         Compatibility wrapper.
         Equivalent to fetch_stock_news.
         """
-        return await self.fetch_stock_news(symbols, limit=limit)
+        return await self.fetch_stock_news(
+            symbols=symbols,
+            start=kwargs.get("start"),
+            end=kwargs.get("end"),
+        )
 
     # ------------------------------------------------------------------
     # 📰 Stock news (ticker-baseret)
     # ------------------------------------------------------------------
+
+    # ------------------------------------------------------------------
+    # 📰 Stock news – FULL HISTORY with paging + from/to
+    # ------------------------------------------------------------------
     async def fetch_stock_news(
-        self, symbols: Iterable[str], limit: int = 20
+        self,
+        symbols: Iterable[str],
+        start: str | None = None,
+        end: str | None = None,
     ) -> pd.DataFrame:
-        params = {
-            "symbols": ",".join(symbols),
-            "limit": limit,
-            "apikey": self.api_key,
-        }
-        data = await self.client.get_json("news/stock", params=params)
-        return self._news_to_df(data, news_type="stock_news")
+        """
+        Fetch ALL stock news for given symbols between start/end.
+        Uses FMP paging (limit + page).
+        """
+
+        MAX_LIMIT = 250
+        MAX_PAGES = 100
+
+        all_rows = []
+
+        start_dt = pd.to_datetime(start, utc=True) if start else None
+
+        for page in range(MAX_PAGES):
+            params = {
+                "symbols": ",".join(symbols),
+                "limit": MAX_LIMIT,
+                "page": page,
+                "apikey": self.api_key,
+            }
+
+            if start:
+                params["from"] = start
+            if end:
+                params["to"] = end
+
+            data = await self.client.get_json("news/stock", params=params)
+
+            if not data:
+                break  # no more pages
+
+            df = self._news_to_df(data, news_type="stock_news")
+
+            if df.empty:
+                break
+
+            # Stop hvis vi er kommet længere tilbage end start
+            if start_dt is not None:
+                oldest = df["ts"].min()
+                if pd.notna(oldest) and oldest < start_dt:
+                    df = df[df["ts"] >= start_dt]
+                    all_rows.append(df)
+                    break
+
+            all_rows.append(df)
+
+        if not all_rows:
+            return pd.DataFrame(
+                columns=[
+                    "ts",
+                    "headline",
+                    "text",
+                    "publisher",
+                    "source",
+                    "url",
+                    "symbol",
+                    "image",
+                    "site",
+                    "type",
+                ]
+            )
+
+        return (
+            pd.concat(all_rows)
+            .drop_duplicates(subset=["ts", "headline", "url"])
+            .sort_values("ts")
+        )
 
     # ------------------------------------------------------------------
     # 🌍 Generelle nyheder (CNBC, Reuters, m.fl.)

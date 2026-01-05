@@ -6,6 +6,11 @@ import pandas as pd
 from sdu_dst.sources.financialmodelingprep import FinancialModelingPrepSource
 
 
+import sdu_dst.api.client as api_client
+
+api_client._redis = None
+
+
 # ============================================================
 # 🧱 Helper utilities
 # ============================================================
